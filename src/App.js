@@ -184,7 +184,7 @@ function App() {
       if (time) requestBody.time_of_birth = time;
       if (place) requestBody.place_of_birth = place;
 
-      const response = await fetch("http://127.0.0.1:8000/analyze", {
+      const response = await fetch("https://python-backend-c5ym.onrender.com/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody)
