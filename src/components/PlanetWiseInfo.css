@@ -1,0 +1,107 @@
+.planet-wise-container {
+  margin-top: 50px;
+}
+
+.planets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.planet-card {
+  background: linear-gradient(135deg, var(--galaxy-blue), #2a2a5a);
+  border-radius: 15px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.planet-card:hover {
+  border-color: var(--neon-pink);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(255, 0, 255, 0.3);
+}
+
+.planet-card.expanded {
+  border-color: var(--electric-blue);
+  box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+}
+
+.planet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.planet-title {
+  color: var(--lime-green);
+  font-size: 1.2rem;
+  margin: 0;
+  text-shadow: 0 0 10px var(--lime-green);
+}
+
+.planet-arrow {
+  color: var(--electric-blue);
+  transition: transform 0.3s ease;
+}
+
+.planet-card.expanded .planet-arrow {
+  transform: rotate(180deg);
+}
+
+.planet-qualities {
+  margin-bottom: 15px;
+}
+
+.quality-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tag.element {
+  background: var(--electric-blue);
+  color: black;
+}
+
+.tag.modality {
+  background: var(--neon-pink);
+  color: white;
+}
+
+.tag.polarity {
+  background: var(--lime-green);
+  color: black;
+}
+
+.planet-keywords {
+  color: var(--sunset-orange);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.planet-description {
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideIn 0.5s ease-out;
+}
+
+.planet-description p {
+  margin: 0;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
