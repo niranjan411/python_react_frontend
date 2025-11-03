@@ -33,7 +33,7 @@ const YouExp = ({ lifeExperience }) => {
   border: "1px solid rgba(255,255,255,0.15)",
   boxShadow: "0 4px 25px rgba(0,0,0,0.15)",
   maxWidth: '300px',
-  minWidth:'250px'
+  minWidth:'300px'
 }
 
     ,

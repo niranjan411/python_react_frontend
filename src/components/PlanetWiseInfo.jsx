@@ -1,18 +1,19 @@
 import React from 'react';
-
+import bg from './exp.jpg';
 const PlanetWiseInfo = ({ planetInfo }) => {
   const styles = {
     container: {
-      background: 'white',
+      backgroundImage:`url(${bg})`,
       padding: '2rem',
       borderRadius: '15px',
       boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-      marginBottom: '2rem'
+      marginBottom: '2rem',
+      backgroundSize:"cover",
     },
     title: {
       textAlign: 'center',
       marginBottom: '2rem',
-      color: '#333',
+      color: '#fff',
       fontSize: '1.5rem',
       fontWeight: '600'
     },

@@ -212,7 +212,7 @@ const BirthInput = ({ onCalculate }) => {
       setLoading(true);
       setErrors({});
 
-      const response = await fetch('http://localhost:5000/api/calculate/formatted', {
+      const response = await fetch('http://localhost:5000/result', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
