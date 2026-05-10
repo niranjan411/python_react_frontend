@@ -108,7 +108,7 @@ const BirthInput = ({ onCalculate }) => {
     };
     try {
       setLoading(true); setErrors({});
-      const res = await fetch(' http://10.25.176.138:5000/result', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const res = await fetch('  https://backend-gfeg.onrender.com/result', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Failed');
       if (result.success) onCalculate(result.data);
