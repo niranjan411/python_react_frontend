@@ -1,269 +1,203 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const ModalityPolarity = ({ modalities, polarities }) => {
-  const styles = {
-    container: {
-      background: "linear-gradient(135deg, #dff3ff 0%, #bfe3ff 50%, #a9d8ff 100%)",
+// Demo data for preview
+const DEMO_MODALITIES = { Cardinal: 45, Fixed: 33, Mutable: 22 };
+const DEMO_POLARITIES = { Yang: 60, Yin: 40 };
 
-      padding: '2rem',
-      borderRadius: '15px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-      marginBottom: '2rem'
-    },
-    title: {
-      textAlign: 'center',
-      marginBottom: '2rem',
-      color: '#333',
-      fontSize: '1.5rem',
-      fontWeight: '600'
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-      gap: '3rem'
-    },
-    section: {
-      marginBottom: '1.5rem'
-    },
-    sectionTitle: {
-      color: '#333',
-      fontSize: '1.2rem',
-      fontWeight: '600',
-      marginBottom: '1.5rem',
-      textAlign: 'center'
-    },
-    
-    percentage: {
-      fontSize: '2.5rem',
-      fontWeight: '700',
-      marginBottom: '0.5rem',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      backgroundClip: 'text',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent'
-    },
-    majorityName: {
-      fontSize: '1.3rem',
-      fontWeight: '600',
-      color: '#333',
-      textTransform: 'capitalize',
-      marginBottom: '2rem'
-    },
-    progressBarContainer: {
-      position: 'relative',
-      marginBottom: '3rem'
-    },
-    progressBar: {
-      height: '25px',
-      background: '#e9ecef',
-      borderRadius: '12px',
-      overflow: 'hidden',
-      position: 'relative'
-    },
-    progressFill: {
-      height: '100%',
-      borderRadius: '12px',
-      transition: 'width 0.5s ease'
-    },
-    segmentLabel: {
-      position: 'absolute',
-      top: '35px',
-      fontSize: '0.8rem',
-      fontWeight: '600',
-      textAlign: 'center',
-      textTransform: 'capitalize',
-      color: '#333',
-      transform: 'translateX(-50%)'
-    },
-    noData: {
-      textAlign: 'center',
-      color: '#666',
-      padding: '2rem',
-      fontStyle: 'italic',
-      background: '#f8f9fa',
-      borderRadius: '8px',
-      border: '2px dashed #e9ecef'
-    },
-    minTitleAndPercentage:{
-      display:'flex',
-      justifyContent: 'space-between'
-    }
-  };
+const MODALITY_META = {
+  cardinal: { icon: '⚡', label: 'Cardinal', desc: 'Initiating energy', color: '#60A5FA', glow: '#3B82F6' },
+  fixed:    { icon: '🔒', label: 'Fixed',    desc: 'Sustaining energy', color: '#F87171', glow: '#EF4444' },
+  mutable:  { icon: '🌀', label: 'Mutable',  desc: 'Adapting energy',  color: '#34D399', glow: '#10B981' },
+};
 
-  // Colors for different modalities
-  const modalityColors = {
-    fixed: '#FF6B6B',    // Red
-    mutable: '#4ECDC4',  // Teal
-    cardinal: '#45B7D1'  // Blue
-  };
+const POLARITY_META = {
+  yang: { icon: '☀️', label: 'Yang', desc: 'Active · Expressive', color: '#FBBF24', glow: '#F59E0B' },
+  yin:  { icon: '🌙', label: 'Yin',  desc: 'Receptive · Introspective', color: '#A78BFA', glow: '#7C3AED' },
+};
 
-  // Colors for polarities
-  const polarityColors = {
-    yang: '#FFA726',     // Orange
-    yin: '#7E57C2'       // Purple
-  };
+const getMeta = (map, key) => map[key?.toLowerCase()] || { icon: '◉', label: key, desc: '', color: '#aaa', glow: '#888' };
 
-  const getMajorityItem = (data, colors) => {
-    if (!data) return null;
-    
-    const entries = Object.entries(data);
-    if (entries.length === 0) return null;
+const getMajority = (data) => {
+  if (!data) return null;
+  return Object.entries(data).reduce((max, cur) => cur[1] > max[1] ? cur : max);
+};
 
-    // Find the item with highest percentage
-    const majority = entries.reduce((max, current) => 
-      current[1] > max[1] ? current : max
-    );
+const getSegments = (data) => {
+  if (!data) return [];
+  const total = Object.values(data).reduce((s, v) => s + v, 0);
+  let pos = 0;
+  return Object.entries(data).map(([name, val]) => {
+    const width = (val / total) * 100;
+    const seg = { name, value: val, width, position: pos, center: pos + width / 2 };
+    pos += width;
+    return seg;
+  });
+};
 
-    const [name, percentage] = majority;
-
-    return {
-      name,
-      percentage,
-      color: colors[name.toLowerCase()]
-    };
-  };
-
-  const getProgressData = (data, colors) => {
-    if (!data) return null;
-
-    const entries = Object.entries(data);
-    const total = entries.reduce((sum, [, percentage]) => sum + percentage, 0);
-    
-    let currentPosition = 0;
-    const segments = entries.map(([name, percentage]) => {
-      const width = (percentage / total) * 100;
-      const segment = {
-        name,
-        percentage,
-        width,
-        color: colors[name.toLowerCase()],
-        position: currentPosition,
-        labelPosition: currentPosition + (width / 2) // Center of the segment
-      };
-      currentPosition += width;
-      return segment;
-    });
-
-    return segments;
-  };
-
-  if (!modalities && !polarities) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.noData}>
-          Modality and polarity data will appear here after calculation
-        </div>
-      </div>
-    );
-  }
-
-  const modalityMajority = getMajorityItem(modalities, modalityColors);
-  const polarityMajority = getMajorityItem(polarities, polarityColors);
-  const modalitySegments = getProgressData(modalities, modalityColors);
-  const polaritySegments = getProgressData(polarities, polarityColors);
+const DonutRing = ({ segments, metaMap, size = 120 }) => {
+  const [hovered, setHovered] = useState(null);
+  const r = 42, cx = 60, cy = 60, circ = 2 * Math.PI * r;
+  let offset = 0;
 
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Modality & Polarity</h2>
-      <div style={styles.grid}>
-        {/* Modality Section */}
-        <div>
-          <div style={styles.minTitleAndPercentage}>
-          <h3 style={styles.sectionTitle}>Modality</h3>
-          {modalityMajority && (
-            <div style={styles.majorityItem}>
-              <div style={styles.percentage}>{modalityMajority.percentage}%</div>
-              <div style={styles.majorityName}>{modalityMajority.name}</div>
-              
-            </div>
-          )}  
-          </div>
-
-          {modalityMajority && (
-            <div style={styles.majorityItem}>
-              {/* Progress Bar with Labels */}
-              <div style={styles.progressBarContainer}>
-                <div style={styles.progressBar}>
-                  {modalitySegments?.map((segment, index) => (
-                    <div
-                      key={segment.name}
-                      style={{
-                        ...styles.progressFill,
-                        width: `${segment.width}%`,
-                        background: segment.color,
-                        position: 'absolute',
-                        left: `${segment.position}%`
-                      }}
-                    />
-                  ))}
-                </div>
-                
-                {/* Segment Labels */}
-                {modalitySegments?.map((segment, index) => (
-                  <div
-                    key={segment.name}
-                    style={{
-                      ...styles.segmentLabel,
-                      left: `${segment.labelPosition}%`
-                    }}
-                  >
-                    {segment.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox="0 0 120 120">
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="16" />
+        {segments.map((seg, i) => {
+          const meta = getMeta(metaMap, seg.name);
+          const dash = (seg.width / 100) * circ;
+          const gap = circ - dash;
+          const el = (
+            <circle
+              key={seg.name}
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke={meta.color}
+              strokeWidth={hovered === seg.name ? 18 : 14}
+              strokeDasharray={`${dash} ${gap}`}
+              strokeDashoffset={-offset * circ / 100 + circ * 0.25}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-width 0.2s, opacity 0.2s', opacity: hovered && hovered !== seg.name ? 0.35 : 1, cursor: 'pointer', filter: hovered === seg.name ? `drop-shadow(0 0 6px ${meta.glow})` : 'none' }}
+              onMouseEnter={() => setHovered(seg.name)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          );
+          offset += seg.width;
+          return el;
+        })}
+      </svg>
+      {/* Center label */}
+      {hovered ? (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <span style={{ fontSize: '1.3rem' }}>{getMeta(metaMap, hovered).icon}</span>
+          <span style={{ fontSize: '0.65rem', color: getMeta(metaMap, hovered).color, fontWeight: 700, marginTop: 2 }}>
+            {segments.find(s => s.name === hovered)?.value}%
+          </span>
         </div>
-
-        {/* Polarity Section */}
-        <div>
-          <div style={styles.minTitleAndPercentage}>
-          <h3 style={styles.sectionTitle}>Polarity</h3>
-           {modalityMajority && (
-            <div style={styles.majorityItem}>
-              <div style={styles.percentage}>{polarityMajority.percentage}%</div>
-              <div style={styles.majorityName}>{polarityMajority.name}</div>
-              
-            </div>
-          )}  
-         </div>
-          {modalityMajority && (
-            <div style={styles.majorityItem}>
-              {/* Progress Bar with Labels */}
-              <div style={styles.progressBarContainer}>
-                <div style={styles.progressBar}>
-                  {polaritySegments?.map((segment, index) => (
-                    <div
-                      key={segment.name}
-                      style={{
-                        ...styles.progressFill,
-                        width: `${segment.width}%`,
-                        background: segment.color,
-                        position: 'absolute',
-                        left: `${segment.position}%`
-                      }}
-                    />
-                  ))}
-                </div>
-                
-                {/* Segment Labels */}
-                {polaritySegments?.map((segment, index) => (
-                  <div
-                    key={segment.name}
-                    style={{
-                      ...styles.segmentLabel,
-                      left: `${segment.labelPosition}%`
-                    }}
-                  >
-                    {segment.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <span style={{ fontSize: '1.5rem' }}>✦</span>
         </div>
+      )}
+    </div>
+  );
+};
+
+const LegendRow = ({ seg, metaMap }) => {
+  const meta = getMeta(metaMap, seg.name);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.55rem 0.8rem', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '0.5rem' }}>
+      <span style={{ fontSize: '1.1rem' }}>{meta.icon}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#e2e8f0', textTransform: 'capitalize' }}>{seg.name}</span>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: meta.color }}>{seg.value}%</span>
+        </div>
+        {/* Mini bar */}
+        <div style={{ height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${seg.value}%`, background: `linear-gradient(90deg, ${meta.color}, ${meta.glow})`, borderRadius: '4px', boxShadow: `0 0 6px ${meta.glow}88`, transition: 'width 0.6s ease' }} />
+        </div>
+        <div style={{ fontSize: '0.68rem', color: 'rgba(180,190,215,0.55)', marginTop: '0.15rem' }}>{meta.desc}</div>
       </div>
     </div>
+  );
+};
+
+const Section = ({ title, headerIcon, data, metaMap }) => {
+  const segments = getSegments(data);
+  const [majorityName, majorityVal] = getMajority(data) || ['—', 0];
+  const majorityMeta = getMeta(metaMap, majorityName);
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '1.5rem', flex: 1, minWidth: 0 }}>
+      {/* Section header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <span style={{ fontSize: '1.1rem' }}>{headerIcon}</span>
+        <h3 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(200,210,235,0.7)' }}>{title}</h3>
+      </div>
+
+      {/* Donut + majority */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.25rem' }}>
+        <DonutRing segments={segments} metaMap={metaMap} />
+        <div>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(180,190,220,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.2rem' }}>Dominant</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.2rem' }}>
+            <span style={{ fontSize: '1.4rem' }}>{majorityMeta.icon}</span>
+            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: majorityMeta.color, textTransform: 'capitalize' }}>{majorityName}</span>
+          </div>
+          <div style={{
+            display: 'inline-block',
+            fontSize: '1.7rem',
+            fontWeight: 800,
+            background: `linear-gradient(135deg, ${majorityMeta.color}, ${majorityMeta.glow})`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            lineHeight: 1,
+          }}>
+            {majorityVal}%
+          </div>
+          <div style={{ fontSize: '0.7rem', color: 'rgba(180,190,215,0.5)', marginTop: '0.2rem' }}>{majorityMeta.desc}</div>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div>
+        {segments.map(seg => <LegendRow key={seg.name} seg={seg} metaMap={metaMap} />)}
+      </div>
+    </div>
+  );
+};
+
+const ModalityPolarity = ({ modalities, polarities }) => {
+  const mod = modalities || DEMO_MODALITIES;
+  const pol = polarities || DEMO_POLARITIES;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;600&display=swap');
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        * { box-sizing: border-box; }
+      `}</style>
+
+      <div style={{
+        background: 'radial-gradient(ellipse at 30% 10%, #0d1b4b 0%, #050c1f 55%, #0a0520 100%)',
+        minHeight: '100vh',
+        padding: '2.5rem 1.5rem',
+        fontFamily: "'Lato', sans-serif",
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Nebula blobs */}
+        <div style={{ position:'absolute', top:'-80px', right:'-60px', width:'380px', height:'380px', background:'radial-gradient(circle, rgba(102,126,234,0.13) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'-50px', left:'-50px', width:'320px', height:'320px', background:'radial-gradient(circle, rgba(118,75,162,0.1) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+
+        {/* Title */}
+        <div style={{ textAlign:'center', marginBottom:'2.5rem', animation:'fadeUp 0.5s ease both' }}>
+          <div style={{ fontSize:'1.8rem', marginBottom:'0.3rem' }}>☯ 🌗</div>
+          <h2 style={{ fontFamily:"'Cinzel', serif", fontSize:'clamp(1.3rem,3.5vw,1.9rem)', fontWeight:700, color:'#fff', margin:'0 0 0.35rem 0', letterSpacing:'0.08em', textShadow:'0 0 30px rgba(150,140,255,0.4)' }}>
+            Modality &amp; Polarity
+          </h2>
+          <p style={{ color:'rgba(180,190,220,0.5)', fontSize:'0.8rem', margin:0, letterSpacing:'0.12em', textTransform:'uppercase' }}>
+            Energetic Blueprint
+          </p>
+        </div>
+
+        {/* Two panels */}
+        <div style={{
+          display: 'flex',
+          gap: '1.25rem',
+          maxWidth: '860px',
+          margin: '0 auto',
+          flexWrap: 'wrap',
+          animation: 'fadeUp 0.5s ease 0.15s both',
+        }}>
+          <Section title="Modality" headerIcon="⚡" data={mod} metaMap={MODALITY_META} />
+          <Section title="Polarity"  headerIcon="☯"  data={pol} metaMap={POLARITY_META}  />
+        </div>
+      </div>
+    </>
   );
 };
 

@@ -1,405 +1,293 @@
 import React, { useState } from 'react';
 
-const BirthInput = ({ onCalculate }) => {
-  const [formData, setFormData] = useState({
-    day: '',
-    month: '',
-    year: '',
-    hour: '',
-    minutes: '',
-    ampm: 'AM',
-    lat: '',
-    lng: ''
-  });
+const FIELD_META = {
+  day:     { label: 'Day',      placeholder: 'DD',        icon: '📅' },
+  month:   { label: 'Month',    placeholder: 'MM',        icon: '🗓️' },
+  year:    { label: 'Year',     placeholder: 'YYYY',      icon: '🌌' },
+  hour:    { label: 'Hour',     placeholder: 'HH',        icon: '🕐' },
+  minutes: { label: 'Minutes',  placeholder: 'MM',        icon: '⏱️' },
+  lat:     { label: 'Latitude', placeholder: 'e.g. 40.7128',  icon: '🧭' },
+  lng:     { label: 'Longitude',placeholder: 'e.g. -74.0060', icon: '📍' },
+};
 
+const InputField = ({ id, type = 'number', min, max, value, onChange, hasError, errorMsg, disabled }) => {
+  const [focused, setFocused] = useState(false);
+  const meta = FIELD_META[id] || {};
+  const accent = hasError ? '#F87171' : focused ? '#818CF8' : 'rgba(255,255,255,0.1)';
+
+  return (
+    <div style={{ flex: 1, minWidth: '90px' }}>
+      <label style={{ display:'flex', alignItems:'center', gap:'0.3rem', marginBottom:'0.5rem', fontSize:'0.72rem', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color: focused ? '#818CF8' : 'rgba(180,190,220,0.6)' }}>
+        <span>{meta.icon}</span> {meta.label}
+      </label>
+      <input
+        type={type}
+        placeholder={meta.placeholder}
+        min={min} max={max}
+        value={value}
+        onChange={e => onChange(id, e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          padding: '0.75rem 0.85rem',
+          background: 'rgba(255,255,255,0.05)',
+          border: `1.5px solid ${accent}`,
+          borderRadius: '12px',
+          fontSize: '0.95rem',
+          color: '#fff',
+          outline: 'none',
+          transition: 'border-color 0.25s, box-shadow 0.25s',
+          boxShadow: focused ? `0 0 0 3px ${hasError ? '#F8717122' : '#818CF833'}` : 'none',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+        }}
+      />
+      {errorMsg && <div style={{ color:'#F87171', fontSize:'0.7rem', marginTop:'0.3rem' }}>{errorMsg}</div>}
+    </div>
+  );
+};
+
+const BirthInput = ({ onCalculate }) => {
+  const [formData, setFormData] = useState({ day:'', month:'', year:'', hour:'', minutes:'', ampm:'AM', lat:'', lng:'' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-
-  const styles = {
-    container: {
-      background: 'white',
-      padding: '2rem',
-      borderRadius: '15px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-      marginBottom: '2rem',
-      maxWidth: '500px',
-      margin: '0 auto'
-    },
-    title: {
-      textAlign: 'center',
-      marginBottom: '1.5rem',
-      color: '#333',
-      fontSize: '1.5rem',
-      fontWeight: '600'
-    },
-    form: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem'
-    },
-    row: {
-      display: 'flex',
-      gap: '1rem',
-      flexWrap: 'wrap'
-    },
-    inputGroup: {
-      flex: '1',
-      minWidth: '120px'
-    },
-    label: {
-      display: 'block',
-      marginBottom: '0.5rem',
-      fontWeight: '500',
-      color: '#555',
-      fontSize: '0.9rem'
-    },
-    input: {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e1e5e9',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      transition: 'border-color 0.3s ease'
-    },
-    select: {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e1e5e9',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      background: 'white'
-    },
-    locationRow: {
-      display: 'flex',
-      gap: '1rem',
-      alignItems: 'flex-end'
-    },
-    error: {
-      color: '#d32f2f',
-      fontSize: '0.8rem',
-      marginTop: '0.25rem'
-    },
-    inputError: {
-      borderColor: '#d32f2f'
-    }
-  };
+  const [locLoading, setLocLoading] = useState(false);
 
   const handleChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
+    setFormData(p => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors(p => ({ ...p, [field]: '' }));
   };
 
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setErrors(prev => ({ ...prev, location: 'Geolocation is not supported by this browser.' }));
-      return;
-    }
-
-    setErrors(prev => ({ ...prev, location: '' }));
-
+    if (!navigator.geolocation) { setErrors(p => ({ ...p, location: 'Geolocation not supported.' })); return; }
+    setLocLoading(true);
+    setErrors(p => ({ ...p, location: '' }));
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setFormData(prev => ({
-          ...prev,
-          lat: latitude.toFixed(6),
-          lng: longitude.toFixed(6)
-        }));
+      ({ coords }) => {
+        setFormData(p => ({ ...p, lat: coords.latitude.toFixed(6), lng: coords.longitude.toFixed(6) }));
+        setLocLoading(false);
       },
-      (error) => {
-        let errorMessage = 'Unable to retrieve your location.';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please allow location access.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-          default:
-            errorMessage = 'An unknown error occurred.';
-            break;
-        }
-        setErrors(prev => ({ ...prev, location: errorMessage }));
+      (err) => {
+        const msgs = { 1:'Location access denied.', 2:'Location unavailable.', 3:'Request timed out.' };
+        setErrors(p => ({ ...p, location: msgs[err.code] || 'Unknown error.' }));
+        setLocLoading(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   };
 
   const validateForm = () => {
     const newErrors = {};
-    const day = parseInt(formData.day);
-    const month = parseInt(formData.month);
-    const year = parseInt(formData.year);
-    const hour = parseInt(formData.hour);
-    const minutes = parseInt(formData.minutes);
-
-    // Date validation
-    const date = new Date(year, month - 1, day);
-    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-      newErrors.date = 'Invalid date. Please check day, month, and year.';
-    }
-
-    const now = new Date();
-    if (date > now) {
-      newErrors.date = 'Birth date cannot be in the future.';
-    }
-
-    if (year < 1900 || year > now.getFullYear()) {
-      newErrors.year = `Year must be between 1900 and ${now.getFullYear()}.`;
-    }
-
-    // Time validation
-    if (hour < 1 || hour > 12) {
-      newErrors.hour = 'Hour must be between 1 and 12.';
-    }
-
-    if (minutes < 0 || minutes > 59) {
-      newErrors.minutes = 'Minutes must be between 0 and 59.';
-    }
-
-    // Latitude/Longitude validation
-    const lat = parseFloat(formData.lat);
-    const lng = parseFloat(formData.lng);
-
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      newErrors.lat = 'Latitude must be between -90 and 90.';
-    }
-
-    if (isNaN(lng) || lng < -180 || lng > 180) {
-      newErrors.lng = 'Longitude must be between -180 and 180.';
-    }
-
+    const { day, month, year, hour, minutes, lat, lng } = formData;
+    const d = parseInt(day), m = parseInt(month), y = parseInt(year), h = parseInt(hour), min = parseInt(minutes);
+    const date = new Date(y, m - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) newErrors.date = 'Invalid date.';
+    if (date > new Date()) newErrors.date = 'Birth date cannot be in the future.';
+    if (y < 1900 || y > new Date().getFullYear()) newErrors.year = `Year must be 1900–${new Date().getFullYear()}.`;
+    if (h < 1 || h > 12) newErrors.hour = 'Hour: 1–12.';
+    if (min < 0 || min > 59) newErrors.minutes = 'Minutes: 0–59.';
+    const la = parseFloat(lat), ln = parseFloat(lng);
+    if (isNaN(la) || la < -90 || la > 90) newErrors.lat = 'Latitude: –90 to 90.';
+    if (isNaN(ln) || ln < -180 || ln > 180) newErrors.lng = 'Longitude: –180 to 180.';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    // Convert to 24-hour format
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
     let hour24 = parseInt(formData.hour);
-    if (formData.ampm === 'PM' && hour24 !== 12) {
-      hour24 += 12;
-    } else if (formData.ampm === 'AM' && hour24 === 12) {
-      hour24 = 0;
-    }
-
-    // Format for backend
-    const formattedDate = `${formData.year}-${formData.month.padStart(2, '0')}-${formData.day.padStart(2, '0')}`;
-    const formattedTime = `${hour24.toString().padStart(2, '0')}:${formData.minutes.padStart(2, '0')}`;
-
+    if (formData.ampm === 'PM' && hour24 !== 12) hour24 += 12;
+    else if (formData.ampm === 'AM' && hour24 === 12) hour24 = 0;
     const payload = {
-      date: formattedDate,
-      time: formattedTime,
+      date: `${formData.year}-${formData.month.padStart(2,'0')}-${formData.day.padStart(2,'0')}`,
+      time: `${hour24.toString().padStart(2,'0')}:${formData.minutes.padStart(2,'0')}`,
       latitude: parseFloat(formData.lat),
-      longitude: parseFloat(formData.lng)
+      longitude: parseFloat(formData.lng),
     };
-
     try {
-      setLoading(true);
-      setErrors({});
-
-      const response = await fetch('http://localhost:5000/result', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to calculate profile');
-      }
-
-      if (result.success) {
-        onCalculate(result.data);
-      } else {
-        throw new Error(result.error);
-      }
-      
-    } catch (error) {
-      console.error('Error:', error);
-      setErrors(prev => ({ ...prev, submit: error.message || 'Failed to submit data. Please try again.' }));
+      setLoading(true); setErrors({});
+      const res = await fetch('http://localhost:5000/result', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed');
+      if (result.success) onCalculate(result.data);
+      else throw new Error(result.error);
+    } catch (err) {
+      setErrors(p => ({ ...p, submit: err.message || 'Failed. Please try again.' }));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Enter Your Birth Details</h2>
-      <form style={styles.form} onSubmit={handleSubmit}>
-        <div style={styles.row}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Day</label>
-            <input
-              type="number"
-              placeholder="DD"
-              min="1"
-              max="31"
-              style={{...styles.input, ...(errors.day || errors.date ? styles.inputError : {})}}
-              value={formData.day}
-              onChange={(e) => handleChange('day', e.target.value)}
-              required
-            />
-            {errors.day && <div style={styles.error}>{errors.day}</div>}
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Month</label>
-            <input
-              type="number"
-              placeholder="MM"
-              min="1"
-              max="12"
-              style={{...styles.input, ...(errors.month || errors.date ? styles.inputError : {})}}
-              value={formData.month}
-              onChange={(e) => handleChange('month', e.target.value)}
-              required
-            />
-            {errors.month && <div style={styles.error}>{errors.month}</div>}
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Year</label>
-            <input
-              type="number"
-              placeholder="YYYY"
-              min="1900"
-              max="2024"
-              style={{...styles.input, ...(errors.year || errors.date ? styles.inputError : {})}}
-              value={formData.year}
-              onChange={(e) => handleChange('year', e.target.value)}
-              required
-            />
-            {errors.year && <div style={styles.error}>{errors.year}</div>}
-            {errors.date && <div style={styles.error}>{errors.date}</div>}
-          </div>
-        </div>
+  const [ampmFocused, setAmpmFocused] = useState(false);
 
-        <div style={styles.row}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Hour</label>
-            <input
-              type="number"
-              placeholder="HH"
-              min="1"
-              max="12"
-              style={{...styles.input, ...(errors.hour ? styles.inputError : {})}}
-              value={formData.hour}
-              onChange={(e) => handleChange('hour', e.target.value)}
-              required
-            />
-            {errors.hour && <div style={styles.error}>{errors.hour}</div>}
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;600&display=swap');
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+        input::placeholder { color: rgba(180,190,220,0.3); }
+        * { box-sizing:border-box; }
+      `}</style>
+
+      <div style={{
+        //background: 'radial-gradient(ellipse at 30% 10%, #0d1b4b 0%, #050c1f 55%, #0a0520 100%)',
+        minHeight: '100vh',
+        padding: '2.5rem 1.5rem',
+        fontFamily: "'Lato', sans-serif",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Nebula blobs */}
+        <div style={{ position:'absolute', top:'-80px', right:'-60px', width:'420px', height:'420px', background:'radial-gradient(circle, rgba(102,126,234,0.13) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'-50px', left:'-50px', width:'340px', height:'340px', background:'radial-gradient(circle, rgba(118,75,162,0.1) 0%, transparent 70%)', borderRadius:'50%', pointerEvents:'none' }} />
+
+        {/* Card */}
+        <div style={{
+          width: '100%', maxWidth: '480px',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.09)',
+          borderRadius: '24px',
+          padding: '2.25rem 2rem',
+          backdropFilter: 'blur(16px)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.45), 0 0 40px rgba(102,126,234,0.1)',
+          animation: 'fadeUp 0.5s ease both',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Card glow */}
+          <div style={{ position:'absolute', inset:0, background:'radial-gradient(ellipse at 0% 0%, rgba(102,126,234,0.1) 0%, transparent 55%)', pointerEvents:'none', borderRadius:'24px' }} />
+
+          {/* Title */}
+          <div style={{ textAlign:'center', marginBottom:'2rem', position:'relative' }}>
+            <div style={{ fontSize:'1.8rem', marginBottom:'0.3rem' }}>🌠 ✦ 🌠</div>
+            <h2 style={{ fontFamily:"'Cinzel', serif", fontSize:'clamp(1.2rem,3vw,1.6rem)', fontWeight:700, color:'#fff', margin:'0 0 0.3rem', letterSpacing:'0.08em', textShadow:'0 0 25px rgba(150,140,255,0.45)' }}>
+              Birth Details
+            </h2>
+            <p style={{ color:'rgba(180,190,220,0.45)', fontSize:'0.72rem', margin:0, letterSpacing:'0.12em', textTransform:'uppercase' }}>
+              Reveal Your Cosmic Blueprint
+            </p>
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Minutes</label>
-            <input
-              type="number"
-              placeholder="MM"
-              min="0"
-              max="59"
-              style={{...styles.input, ...(errors.minutes ? styles.inputError : {})}}
-              value={formData.minutes}
-              onChange={(e) => handleChange('minutes', e.target.value)}
-              required
-            />
-            {errors.minutes && <div style={styles.error}>{errors.minutes}</div>}
+
+          {/* Section: Date */}
+          <SectionLabel icon="🗓️" text="Date of Birth" />
+          <div style={{ display:'flex', gap:'0.75rem', marginBottom:'1.25rem' }}>
+            <InputField id="day"   min="1"  max="31"                 value={formData.day}   onChange={handleChange} hasError={!!(errors.day||errors.date)} />
+            <InputField id="month" min="1"  max="12"                 value={formData.month} onChange={handleChange} hasError={!!(errors.month||errors.date)} />
+            <InputField id="year"  min="1900" max={new Date().getFullYear()} value={formData.year}  onChange={handleChange} hasError={!!(errors.year||errors.date)} errorMsg={errors.year||errors.date} />
           </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>AM/PM</label>
-            <select 
-              style={styles.select}
-              value={formData.ampm}
-              onChange={(e) => handleChange('ampm', e.target.value)}
-            >
-              <option value="AM">AM</option>
-              <option value="PM">PM</option>
-            </select>
+
+          {/* Section: Time */}
+          <SectionLabel icon="⏰" text="Time of Birth" />
+          <div style={{ display:'flex', gap:'0.75rem', marginBottom:'1.25rem' }}>
+            <InputField id="hour"    min="1"  max="12" value={formData.hour}    onChange={handleChange} hasError={!!errors.hour}    errorMsg={errors.hour} />
+            <InputField id="minutes" min="0"  max="59" value={formData.minutes} onChange={handleChange} hasError={!!errors.minutes} errorMsg={errors.minutes} />
+            {/* AM/PM */}
+            <div style={{ flex:1, minWidth:'80px' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:'0.3rem', marginBottom:'0.5rem', fontSize:'0.72rem', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(180,190,220,0.6)' }}>
+                <span>🌗</span> AM/PM
+              </label>
+              <select
+                value={formData.ampm}
+                onChange={e => handleChange('ampm', e.target.value)}
+                onFocus={() => setAmpmFocused(true)}
+                onBlur={() => setAmpmFocused(false)}
+                style={{
+                  width:'100%', padding:'0.75rem 0.85rem',
+                  background:'rgba(255,255,255,0.05)',
+                  border:`1.5px solid ${ampmFocused ? '#818CF8' : 'rgba(255,255,255,0.1)'}`,
+                  borderRadius:'12px', fontSize:'0.95rem', color:'#fff',
+                  outline:'none', cursor:'pointer',
+                  transition:'border-color 0.25s',
+                  appearance:'none', WebkitAppearance:'none',
+                }}
+              >
+                <option value="AM" style={{ background:'#0d1b4b' }}>AM</option>
+                <option value="PM" style={{ background:'#0d1b4b' }}>PM</option>
+              </select>
+            </div>
           </div>
-        </div>
-        
-        <div style={styles.locationRow}>
-          <div style={{...styles.inputGroup, flex: '1'}}>
-            <label style={styles.label}>Latitude</label>
-            <input
-              type="text"
-              placeholder="e.g., 40.7128"
-              style={{...styles.input, ...(errors.lat ? styles.inputError : {})}}
-              value={formData.lat}
-              onChange={(e) => handleChange('lat', e.target.value)}
-              required
-            />
-            {errors.lat && <div style={styles.error}>{errors.lat}</div>}
+
+          {/* Section: Location */}
+          <SectionLabel icon="🌍" text="Birth Location" />
+          <div style={{ display:'flex', gap:'0.75rem', alignItems:'flex-start', marginBottom: errors.location ? '0.5rem' : '1.5rem' }}>
+            <InputField id="lat" type="text" value={formData.lat} onChange={handleChange} hasError={!!errors.lat} errorMsg={errors.lat} />
+            <InputField id="lng" type="text" value={formData.lng} onChange={handleChange} hasError={!!errors.lng} errorMsg={errors.lng} />
+            <div style={{ paddingTop:'1.6rem' }}>
+              <button
+                onClick={getCurrentLocation}
+                disabled={locLoading}
+                style={{
+                  background:'rgba(16,185,129,0.15)',
+                  border:'1.5px solid rgba(16,185,129,0.4)',
+                  color:'#6EE7B7',
+                  padding:'0.75rem 0.85rem',
+                  borderRadius:'12px',
+                  fontSize:'1rem',
+                  cursor:'pointer',
+                  whiteSpace:'nowrap',
+                  transition:'all 0.2s',
+                  display:'flex', alignItems:'center', gap:'0.35rem',
+                }}
+              >
+                {locLoading
+                  ? <span style={{ display:'inline-block', animation:'spin 0.8s linear infinite' }}>↻</span>
+                  : '📡'}
+              </button>
+            </div>
           </div>
-          <div style={{...styles.inputGroup, flex: '1'}}>
-            <label style={styles.label}>Longitude</label>
-            <input
-              type="text"
-              placeholder="e.g., -74.0060"
-              style={{...styles.input, ...(errors.lng ? styles.inputError : {})}}
-              value={formData.lng}
-              onChange={(e) => handleChange('lng', e.target.value)}
-              required
-            />
-            {errors.lng && <div style={styles.error}>{errors.lng}</div>}
-          </div>
-          <button 
-            type="button" 
+          {errors.location && <div style={{ color:'#F87171', fontSize:'0.72rem', marginBottom:'1rem', marginTop:'-0.5rem' }}>⚠ {errors.location}</div>}
+
+          {/* Submit error */}
+          {errors.submit && (
+            <div style={{ background:'rgba(248,113,113,0.1)', border:'1px solid rgba(248,113,113,0.3)', color:'#F87171', padding:'0.6rem 0.9rem', borderRadius:'10px', fontSize:'0.78rem', marginBottom:'1rem' }}>
+              ⚠ {errors.submit}
+            </div>
+          )}
+
+          {/* Submit button */}
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
             style={{
-              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-              color: 'white',
-              border: 'none',
-              padding: '0.75rem 1rem',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              height: 'fit-content'
+              width:'100%',
+              padding:'0.95rem',
+              background: loading ? 'rgba(102,126,234,0.3)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border:'none',
+              borderRadius:'14px',
+              fontSize:'1rem',
+              fontWeight:700,
+              color:'#fff',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              letterSpacing:'0.05em',
+              boxShadow: loading ? 'none' : '0 8px 24px rgba(102,126,234,0.4)',
+              transition:'all 0.3s',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'0.6rem',
+              fontFamily:"'Lato', sans-serif",
             }}
-            onClick={getCurrentLocation}
           >
-            Get Location
+            {loading
+              ? <><span style={{ display:'inline-block', animation:'spin 0.8s linear infinite' }}>✦</span> Calculating...</>
+              : <><span>🔮</span> Reveal My Astro Profile</>}
           </button>
         </div>
-        {errors.location && <div style={styles.error}>{errors.location}</div>}
-        {errors.submit && <div style={styles.error}>{errors.submit}</div>}
-        
-        <button 
-          type="submit" 
-          style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            border: 'none',
-            padding: '1rem 2rem',
-            borderRadius: '8px',
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            marginTop: '1rem',
-            opacity: loading ? 0.7 : 1
-          }}
-          disabled={loading}
-        >
-          {loading ? 'Calculating...' : 'Get Astro Profile'}
-        </button>
-      </form>
-    </div>
+      </div>
+    </>
   );
 };
+
+const SectionLabel = ({ icon, text }) => (
+  <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', marginBottom:'0.6rem' }}>
+    <span style={{ fontSize:'0.85rem' }}>{icon}</span>
+    <span style={{ fontSize:'0.7rem', fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'rgba(180,190,220,0.45)' }}>{text}</span>
+    <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.06)', marginLeft:'0.3rem' }} />
+  </div>
+);
 
 export default BirthInput;
